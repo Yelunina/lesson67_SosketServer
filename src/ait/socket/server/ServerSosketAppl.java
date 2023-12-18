@@ -1,34 +1,35 @@
 package ait.socket.server;
 
+import ait.socket.server.task.ClientHandler;
+
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.time.LocalTime;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class ServerSosketAppl {
     public static void main(String[] args) {
         int port = 9000;
+        ExecutorService executorService = Executors.newFixedThreadPool(2);
         try (ServerSocket serverSocket = new ServerSocket(port)) {
-            while (true) {
-                System.out.println("server wait....");
-                Socket socket = serverSocket.accept();
-                System.out.println("Connection established");
-                System.out.println("Client host: " + socket.getInetAddress() + ":" + socket.getPort());
-                InputStream inputStream = socket.getInputStream();
-                OutputStream outputStream = socket.getOutputStream();
-                PrintWriter socketWriter = new PrintWriter(outputStream);
-                BufferedReader socketReader = new BufferedReader(new InputStreamReader(inputStream));
+            try {
                 while (true) {
-                    String message = socketReader.readLine();
-                    if (message == null){
-                        break;
-                    }
-                    System.out.println("Server received: " + message);
-                    socketWriter.println(message + " " + LocalTime.now());
-                    socketWriter.flush();
+                    System.out.println("server wait....");
+                    Socket socket = serverSocket.accept();
+                    System.out.println("Connection established");
+                    System.out.println("Client host: " + socket.getInetAddress() + ":" + socket.getPort());
+                    ClientHandler clientHandler = new ClientHandler(socket);
+                    executorService.execute(clientHandler);
                 }
+            } finally {
+                executorService.shutdown();
+                executorService.awaitTermination(1,TimeUnit.MINUTES);
+
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
 
